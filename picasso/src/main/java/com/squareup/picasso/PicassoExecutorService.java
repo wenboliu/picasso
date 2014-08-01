@@ -18,9 +18,8 @@ package com.squareup.picasso;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.telephony.TelephonyManager;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+
+import java.util.concurrent.*;
 
 /**
  * The default {@link java.util.concurrent.ExecutorService} used for new {@link Picasso} instances.
@@ -30,13 +29,14 @@ import java.util.concurrent.TimeUnit;
  */
 class PicassoExecutorService extends ThreadPoolExecutor {
   private static final int DEFAULT_THREAD_COUNT = 3;
+  private static final int DEFAULT_INITIAL_QUEUE_CAPACITY = 11;
 
   PicassoExecutorService() {
     super(DEFAULT_THREAD_COUNT, DEFAULT_THREAD_COUNT, 0, TimeUnit.MILLISECONDS,
-        new LinkedBlockingQueue<Runnable>(), new Utils.PicassoThreadFactory());
+        new PriorityBlockingQueue<Runnable>(DEFAULT_INITIAL_QUEUE_CAPACITY, BitmapHunter.comparator()), new Utils.PicassoThreadFactory());
   }
 
-  void adjustThreadCount(NetworkInfo info) {
+    void adjustThreadCount(NetworkInfo info) {
     if (info == null || !info.isConnectedOrConnecting()) {
       setThreadCount(DEFAULT_THREAD_COUNT);
       return;
@@ -72,9 +72,20 @@ class PicassoExecutorService extends ThreadPoolExecutor {
       default:
         setThreadCount(DEFAULT_THREAD_COUNT);
     }
+
   }
 
-  private void setThreadCount(int threadCount) {
+    @Override
+    protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
+        return new FutureTask<T>(runnable, value);
+    }
+
+    @Override
+    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+        return new FutureTask<T>(callable);
+    }
+
+    private void setThreadCount(int threadCount) {
     setCorePoolSize(threadCount);
     setMaximumPoolSize(threadCount);
   }

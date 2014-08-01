@@ -167,7 +167,22 @@ public class Picasso {
    * @see #load(int)
    */
   public RequestCreator load(Uri uri) {
-    return new RequestCreator(this, uri, 0);
+    return load(uri, 0);
+  }
+
+
+  /**
+   * Start an image request using the specified URI.
+   * <p>
+   * Passing {@code null} as a {@code uri} will not trigger any request but will set a placeholder,
+   * if one is specified.
+   *
+   * @see #load(File)
+   * @see #load(String)
+   * @see #load(int)
+   */
+  public RequestCreator load(Uri uri, int priority) {
+    return new RequestCreator(this, uri, 0, priority);
   }
 
   /**
@@ -187,14 +202,34 @@ public class Picasso {
    * @throws IllegalArgumentException if {@code path} is empty or blank string.
    */
   public RequestCreator load(String path) {
-    if (path == null) {
-      return new RequestCreator(this, null, 0);
-    }
-    if (path.trim().length() == 0) {
-      throw new IllegalArgumentException("Path must not be empty.");
-    }
-    return load(Uri.parse(path));
+    return load(path, 0);
   }
+
+    /**
+     * Start an image request using the specified path. This is a convenience method for calling
+     * {@link #load(Uri)}.
+     * <p>
+     * This path may be a remote URL, file resource (prefixed with {@code file:}), content resource
+     * (prefixed with {@code content:}), or android resource (prefixed with {@code
+     * android.resource:}.
+     * <p>
+     * Passing {@code null} as a {@code path} will not trigger any request but will set a
+     * placeholder, if one is specified.
+     *
+     * @see #load(Uri)
+     * @see #load(File)
+     * @see #load(int)
+     * @throws IllegalArgumentException if {@code path} is empty or blank string.
+     */
+    public RequestCreator load(String path, int priority) {
+        if (path == null) {
+            return new RequestCreator(this, null, 0, priority);
+        }
+        if (path.trim().length() == 0) {
+            throw new IllegalArgumentException("Path must not be empty.");
+        }
+        return load(Uri.parse(path), priority);
+    }
 
   /**
    * Start an image request using the specified image file. This is a convenience method for
@@ -210,10 +245,14 @@ public class Picasso {
    * @see #load(int)
    */
   public RequestCreator load(File file) {
+      return load(file, 0);
+  }
+
+  public RequestCreator load(File file, int priority) {
     if (file == null) {
-      return new RequestCreator(this, null, 0);
+      return new RequestCreator(this, null, 0, priority);
     }
-    return load(Uri.fromFile(file));
+    return load(Uri.fromFile(file), priority);
   }
 
   /**
@@ -224,10 +263,14 @@ public class Picasso {
    * @see #load(File)
    */
   public RequestCreator load(int resourceId) {
+    return load(resourceId, 0);
+  }
+
+  public RequestCreator load(int resourceId, int priority) {
     if (resourceId == 0) {
       throw new IllegalArgumentException("Resource ID must not be zero.");
     }
-    return new RequestCreator(this, null, resourceId);
+    return new RequestCreator(this, null, resourceId, priority);
   }
 
   /**

@@ -23,10 +23,11 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.widget.ImageView;
 import android.widget.RemoteViews;
+import org.jetbrains.annotations.TestOnly;
+
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jetbrains.annotations.TestOnly;
 
 import static com.squareup.picasso.BitmapHunter.forRequest;
 import static com.squareup.picasso.Picasso.LoadedFrom.MEMORY;
@@ -34,22 +35,15 @@ import static com.squareup.picasso.PicassoDrawable.setBitmap;
 import static com.squareup.picasso.PicassoDrawable.setPlaceholder;
 import static com.squareup.picasso.RemoteViewsAction.AppWidgetAction;
 import static com.squareup.picasso.RemoteViewsAction.NotificationAction;
-import static com.squareup.picasso.Utils.OWNER_MAIN;
-import static com.squareup.picasso.Utils.VERB_CHANGED;
-import static com.squareup.picasso.Utils.VERB_COMPLETED;
-import static com.squareup.picasso.Utils.VERB_CREATED;
-import static com.squareup.picasso.Utils.checkMain;
-import static com.squareup.picasso.Utils.checkNotMain;
-import static com.squareup.picasso.Utils.createKey;
-import static com.squareup.picasso.Utils.isMain;
-import static com.squareup.picasso.Utils.log;
+import static com.squareup.picasso.Utils.*;
 
 /** Fluent API for building an image download request. */
 @SuppressWarnings("UnusedDeclaration") // Public API.
 public class RequestCreator {
   private static int nextId = 0;
+    private int priority;
 
-  private static int getRequestId() {
+    private static int getRequestId() {
     if (isMain()) {
       return nextId++;
     }
@@ -85,13 +79,16 @@ public class RequestCreator {
   private Drawable placeholderDrawable;
   private Drawable errorDrawable;
 
-  RequestCreator(Picasso picasso, Uri uri, int resourceId) {
-    if (picasso.shutdown) {
-      throw new IllegalStateException(
+
+
+  RequestCreator(Picasso picasso, Uri uri, int resourceId, int priority) {
+      if (picasso.shutdown) {
+          throw new IllegalStateException(
           "Picasso instance already shut down. Cannot submit new requests.");
-    }
-    this.picasso = picasso;
-    this.data = new Request.Builder(uri, resourceId);
+      }
+      this.picasso = picasso;
+      this.data = new Request.Builder(uri, resourceId);
+      this.priority = priority;
   }
 
   @TestOnly RequestCreator() {
@@ -297,6 +294,7 @@ public class RequestCreator {
       String key = createKey(request, new StringBuilder());
 
       Action action = new FetchAction(picasso, request, skipMemoryCache, key);
+      action.setPriority(priority);
       picasso.submit(action);
     }
   }
@@ -384,6 +382,7 @@ public class RequestCreator {
     Action action =
         new TargetAction(picasso, target, request, skipMemoryCache, errorResId, errorDrawable,
             requestKey);
+    action.setPriority(priority);
     picasso.enqueueAndSubmit(action);
   }
 
@@ -416,7 +415,7 @@ public class RequestCreator {
     RemoteViewsAction action =
         new NotificationAction(picasso, request, remoteViews, viewId, notificationId, notification,
             skipMemoryCache, errorResId, key);
-
+    action.setPriority(priority);
     performRemoteViewInto(action);
   }
 
@@ -448,7 +447,7 @@ public class RequestCreator {
     RemoteViewsAction action =
         new AppWidgetAction(picasso, request, remoteViews, viewId, appWidgetIds, skipMemoryCache,
             errorResId, key);
-
+    action.setPriority(priority);
     performRemoteViewInto(action);
   }
 
@@ -522,7 +521,7 @@ public class RequestCreator {
     Action action =
         new ImageViewAction(picasso, target, request, skipMemoryCache, noFade, errorResId,
             errorDrawable, requestKey, callback);
-
+    action.setPriority(priority);
     picasso.enqueueAndSubmit(action);
   }
 

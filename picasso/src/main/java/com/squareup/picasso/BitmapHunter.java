@@ -22,29 +22,22 @@ import android.graphics.Matrix;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.provider.MediaStore;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import static android.content.ContentResolver.SCHEME_ANDROID_RESOURCE;
-import static android.content.ContentResolver.SCHEME_CONTENT;
-import static android.content.ContentResolver.SCHEME_FILE;
+import static android.content.ContentResolver.*;
 import static android.provider.ContactsContract.Contacts;
 import static com.squareup.picasso.AssetBitmapHunter.ANDROID_ASSET;
 import static com.squareup.picasso.Picasso.LoadedFrom.MEMORY;
-import static com.squareup.picasso.Utils.OWNER_HUNTER;
-import static com.squareup.picasso.Utils.VERB_DECODED;
-import static com.squareup.picasso.Utils.VERB_EXECUTING;
-import static com.squareup.picasso.Utils.VERB_JOINED;
-import static com.squareup.picasso.Utils.VERB_REMOVED;
-import static com.squareup.picasso.Utils.VERB_TRANSFORMED;
-import static com.squareup.picasso.Utils.getLogIdsForHunter;
-import static com.squareup.picasso.Utils.log;
+import static com.squareup.picasso.Utils.*;
 
-abstract class BitmapHunter implements Runnable {
+abstract class BitmapHunter implements Runnable, Order {
 
   /**
    * Global lock for bitmap decoding to ensure that we are only are decoding one at a time. Since
@@ -86,9 +79,24 @@ abstract class BitmapHunter implements Runnable {
     this.action = action;
   }
 
-  protected void setExifRotation(int exifRotation) {
+    static Comparator<Runnable> comparator() {
+      return new Comparator<Runnable>() {
+          @Override
+          public int compare(Runnable task1, Runnable task2) {
+              return  ((Order) task2).getPriority() - ((Order) task1).getPriority();
+          }
+      };
+  }
+
+    protected void setExifRotation(int exifRotation) {
     this.exifRotation = exifRotation;
   }
+
+  @Override
+  public int getPriority() {
+    return action == null? 0 : action.getPriority();
+  }
+
 
   @Override public void run() {
     try {
